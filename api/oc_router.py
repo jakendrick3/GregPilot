@@ -75,4 +75,3 @@ async def post_oc_fluids(*, session: Session = Depends(db.get_session), request:
     await fluids.create_fluids(session=session, fluids=passids)
     await fluidslog.create_fluids_log(session=session, fluids=passlogs)
     return
-    return
