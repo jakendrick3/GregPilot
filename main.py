@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from .db import db
-from .api import items_router, fluids_router, oc_router
+from GregPilot.db import db
+from GregPilot.api import items_router, fluids_router, oc_router
 
 
 app = FastAPI(
