@@ -3,7 +3,7 @@ from sqlmodel import Field, SQLModel, Column, TIMESTAMP, text, Session, select
 class Items(SQLModel, table=True):
     id: str = Field(primary_key=True)
     rawid: str | None = None
-    rawdamage: int | None = None
+    rawdamage: str | None = None
     name: str
 
 
