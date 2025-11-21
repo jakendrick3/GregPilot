@@ -3,9 +3,9 @@ import dotenv
 from sqlmodel import SQLModel, create_engine, Session
 from . import items, itemslog, fluids, fluidslog
 
-dotenv.load_dotenv()
-
+dotenv.load_dotenv(override=False)
 dburl = os.getenv("GPDBURL")
+
 engine = create_engine(dburl)
 
 def create_db():

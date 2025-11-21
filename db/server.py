@@ -4,8 +4,7 @@ from mcstatus import JavaServer
 from sqlmodel import SQLModel, Field, Session, TIMESTAMP, Column, text, select, desc
 from datetime import datetime
 
-dotenv.load_dotenv()
-
+dotenv.load_dotenv(override=False)
 serverurl = os.getenv("GPSERVERURL")
 
 class ServerLog(SQLModel, table=True):
