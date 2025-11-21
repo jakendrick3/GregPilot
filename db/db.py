@@ -1,7 +1,11 @@
+import os
+import dotenv
 from sqlmodel import SQLModel, create_engine, Session
 from . import items, itemslog, fluids, fluidslog
 
-dburl = "postgresql://testgreg:test@postgres/testgreg"
+dotenv.load_dotenv()
+
+dburl = os.getenv("GPDBURL")
 engine = create_engine(dburl)
 
 def create_db():
