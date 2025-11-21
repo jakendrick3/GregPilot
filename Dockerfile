@@ -9,3 +9,5 @@ RUN pip install -r requirements.txt
 EXPOSE 8000
 
 CMD ["fastapi", "run", "main.py", "--host", "0.0.0.0", "--port", "4734"]
+
+LABEL org.opencontainers.image.source https://github.com/jakendrick3/GregPilot
