@@ -23,9 +23,8 @@ class ServerStatus(SQLModel):
 
 
 def QueryServer(*, session: Session):
-    server = JavaServer(serverurl)
-
     try:
+        server = JavaServer(serverurl)
         server.ping()
         ping = True
     except:
