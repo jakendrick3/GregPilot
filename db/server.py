@@ -30,27 +30,36 @@ def QueryServer(*, session: Session):
     except:
         ping = False
 
-    if ping:
-        query = server.query()
+    try:
+        if ping:
+            query = server.query()
 
-        data = {
-            'online': True,
-        }
+            data = {
+                'online': True,
+            }
 
-        if len(query.players.names) == 1:
-            data['players'] = query.players.names[0]
-        elif len(query.players.names) == 0:
-            data['players'] = ''
+            if len(query.players.names) == 1:
+                data['players'] = query.players.names[0]
+            elif len(query.players.names) == 0:
+                data['players'] = ''
+            else:
+                data['players'] = ','.join(query.players.names)
+            
+            entry = ServerLog.model_validate(data)
+            session.add(entry)
+            session.commit()
         else:
-            data['players'] = ','.join(query.players.names)
-        
-        entry = ServerLog.model_validate(data)
-        session.add(entry)
-        session.commit()
-    else:
+            data = {
+                'online': False
+            }
+
+            entry = ServerLog.model_validate(data)
+            session.add(entry)
+            session.commit()
+    except:
         data = {
-            'online': False
-        }
+                'online': False
+            }
 
         entry = ServerLog.model_validate(data)
         session.add(entry)
