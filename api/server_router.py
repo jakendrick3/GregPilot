@@ -7,7 +7,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}}
 )
 
-@router.get("/server", response_model=server.ServerStatus)
+@router.get("/api/server", response_model=server.ServerStatus)
 async def get_items(*, session: Session = Depends(db.get_session)):
     status = await server.read_server_status(session=session)
     return status
