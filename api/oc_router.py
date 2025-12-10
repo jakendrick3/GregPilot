@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session, select
-from ..db import db, items, itemslog, fluids, fluidslog
+from ..db import db, items, itemslog, fluids, fluidslog, powerlog
 from slpp import slpp as lua
 
 router = router = APIRouter(
@@ -74,4 +74,15 @@ async def post_oc_fluids(*, session: Session = Depends(db.get_session), request:
     
     await fluids.create_fluids(session=session, fluids=passids)
     await fluidslog.create_fluids_log(session=session, fluids=passlogs)
+    return
+
+@router.post("/api/oc/power")
+async def post_oc_power(*, session: Session = Depends(db.get_session), request: Request):
+    body_bytes = await request.body()
+    body_str = body_bytes.decode("utf-8")
+    data = unserialize(body_str)
+
+    newlog = powerlog.PowerLogEntry.model_validate(data)
+        
+    await powerlog.create_power_log(session=session, entry=newlog)
     return
