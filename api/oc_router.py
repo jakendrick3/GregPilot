@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session, select
-from ..db import db, items, itemslog, fluids, fluidslog, powerlog, essentia, essentialog
+from ..db import db, items, itemslog, fluids, fluidslog, powerlog, essentia, essentialog, cpus
 from slpp import slpp as lua
 
 router = router = APIRouter(
@@ -114,4 +114,18 @@ async def post_oc_essentia(*, session: Session = Depends(db.get_session), reques
     
     await essentia.create_essentia(session=session, essentia=passids)
     await essentialog.create_essentia_log(session=session, essentia=passlogs)
+    return
+
+@router.post("/api/oc/cpus")
+async def post_oc_cpus(*, session: Session = Depends(db.get_session), request: Request):
+    body_bytes = await request.body()
+    body_str = body_bytes.decode("utf-8")
+    data = unserialize(body_str)
+
+    newcpus = []
+    for cpu in data:
+        newcpu = cpus.CPUPublic.model_validate(cpu)
+        newcpus.append(newcpu)
+        
+    await cpus.create_cpus(session=session, cpus=newcpus)
     return
