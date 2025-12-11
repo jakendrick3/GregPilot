@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from sqlmodel import Session
 from contextlib import asynccontextmanager
 from GregPilot.db import db, server
-from GregPilot.api import items_router, fluids_router, oc_router, server_router, power_router
+from GregPilot.api import items_router, fluids_router, oc_router, server_router, power_router, essentia_router
 
 scheduler = sched.scheduler(time.time, time.sleep)
 
@@ -47,3 +47,4 @@ app.include_router(fluids_router.router)
 app.include_router(oc_router.router)
 app.include_router(server_router.router)
 app.include_router(power_router.router)
+app.include_router(essentia_router.router)

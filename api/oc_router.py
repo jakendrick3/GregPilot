@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session, select
-from ..db import db, items, itemslog, fluids, fluidslog, powerlog
+from ..db import db, items, itemslog, fluids, fluidslog, powerlog, essentia, essentialog
 from slpp import slpp as lua
 
 router = router = APIRouter(
@@ -85,4 +85,33 @@ async def post_oc_power(*, session: Session = Depends(db.get_session), request: 
     newlog = powerlog.PowerLogEntry.model_validate(data)
         
     await powerlog.create_power_log(session=session, entry=newlog)
+    return
+
+@router.post("/api/oc/essentia")
+async def post_oc_essentia(*, session: Session = Depends(db.get_session), request: Request):
+    body_bytes = await request.body()
+    body_str = body_bytes.decode("utf-8")
+    data = unserialize(body_str)
+
+    passids = []
+    passlogs = []
+    for entry in data:
+        newid = {
+            'id': entry["id"],
+            'name': entry["name"]
+        }
+
+        newlog = {
+            'id': entry["id"],
+            'amount': entry["amount"]
+        }
+    
+        newid = essentia.Essentia.model_validate(newid)
+        newlog = essentialog.EssentiaLogEntry.model_validate(newlog)
+
+        passids.append(newid)
+        passlogs.append(newlog)
+    
+    await essentia.create_essentia(session=session, essentia=passids)
+    await essentialog.create_essentia_log(session=session, essentia=passlogs)
     return

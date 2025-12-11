@@ -1,7 +1,7 @@
 import os
 import dotenv
 from sqlmodel import SQLModel, create_engine, Session
-from . import items, itemslog, fluids, fluidslog
+from . import items, itemslog, fluids, fluidslog, power, essentia, essentialog, essentiainv
 
 dotenv.load_dotenv(override=False)
 dburl = os.getenv("GPDBURL")
