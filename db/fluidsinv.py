@@ -2,10 +2,12 @@ from sqlmodel import SQLModel, Field, Column, TIMESTAMP, text, Session, select, 
 from datetime import datetime, timedelta, timezone
 from .fluidslog import FluidsLog
 from .fluids import Fluids
+from .craftables import Craftable
 
 class FluidsInv(SQLModel):
     name: str
     amount: int
+    craftable: bool
     ts: datetime
 
 
@@ -21,27 +23,31 @@ async def read_fluids_inv(*, session: Session):
     ).subquery()
 
     main = (
-        select(FluidsLog, Fluids)
+        select(
+            Fluids.name,
+            FluidsLog.amount,
+            Craftable.craftable,
+            FluidsLog.ts
+        )
         .join(
             sub,
             (FluidsLog.id == sub.c.fluid_id) &
             (FluidsLog.ts == sub.c.latest_ts)
         )
         .join(Fluids, FluidsLog.id == Fluids.id, isouter=True)
+        .join(Craftable, Craftable.fluidid == Fluids.id, isouter=True)
         .where(FluidsLog.ts > cutoff)
     )
 
-    fluidsq = session.exec(main)
+    fluidsq = session.exec(main).all()
     
-    returnfluids = []
-    for log, fluids in fluidsq:
-        combined = {
-            'name': fluids.name,
-            'amount': log.amount,
-            'ts': log.ts
-        }
+    dictitems = [dict(item._mapping) for item in fluidsq]
 
-        validateditem = FluidsInv.model_validate(combined)
+    returnfluids = []
+    for item in dictitems:
+        if item["craftable"] is None:
+            item["craftable"] = False
+        validateditem = FluidsInv.model_validate(item)
         returnfluids.append(validateditem)
     
     return returnfluids

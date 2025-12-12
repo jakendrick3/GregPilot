@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session, select
-from ..db import db, items, itemslog, fluids, fluidslog, powerlog, essentia, essentialog, cpus
+from ..db import db, items, itemslog, fluids, fluidslog, powerlog, essentia, essentialog, cpus, craftables
 from slpp import slpp as lua
 
 router = router = APIRouter(
@@ -12,6 +12,7 @@ def unserialize(raw: str):
     if raw.startswith('"') and raw.endswith('"'):
         raw = raw[1:-1]
     raw = raw.replace('\\"', '"')
+    raw = raw.encode("ascii", errors="ignore").decode("ascii")
 
     result = lua.decode(raw)
 
@@ -128,4 +129,52 @@ async def post_oc_cpus(*, session: Session = Depends(db.get_session), request: R
         newcpus.append(newcpu)
         
     await cpus.create_cpus(session=session, cpus=newcpus)
+    return
+
+@router.post("/api/oc/craftables")
+async def post_oc_craftables(*, session: Session = Depends(db.get_session), request: Request):
+    body_bytes = await request.body()
+    body_str = body_bytes.decode("utf-8")
+    data = unserialize(body_str)
+
+    passitems = []
+    passfluids = []
+    passcrafts = []
+
+    for entry in data:
+        if entry["type"] == "item":
+            itemid = str(entry["id"]) + str(entry["damage"])
+            newitem = {
+                'id': itemid,
+                'name': entry["name"]
+            }
+            newitem = items.Items.model_validate(newitem)
+            passitems.append(newitem)
+
+            newcraft = {
+                'itemid': itemid,
+                'type': "item"
+            }
+            newcraft = craftables.CraftablePublic.model_validate(newcraft)
+            passcrafts.append(newcraft)
+        elif entry["type"] == "fluid":
+            newfluid = {
+                'id': entry["id"],
+                'name': entry["name"]
+            }
+            newfluid = fluids.Fluids.model_validate(newfluid)
+            passfluids.append(newfluid)
+
+            newcraft = {
+                'fluidid': entry["id"],
+                'type': "fluid"
+            }
+            newcraft = craftables.CraftablePublic.model_validate(newcraft)
+            passcrafts.append(newcraft)
+        else:
+            continue
+    
+    await items.create_items(session=session, items=passitems)
+    await fluids.create_fluids(session=session, fluids=passfluids)
+    await craftables.create_craftables(session=session, crafts=passcrafts)
     return

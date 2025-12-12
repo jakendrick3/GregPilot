@@ -2,10 +2,12 @@ from sqlmodel import SQLModel, Field, Column, TIMESTAMP, text, Session, select, 
 from datetime import datetime, timedelta, timezone
 from .itemslog import ItemsLog
 from .items import Items
+from .craftables import Craftable
 
 class ItemsInv(SQLModel):
     name: str
     size: int
+    craftable: bool
     ts: datetime
 
 
@@ -21,28 +23,32 @@ async def read_items_inv(*, session: Session):
     ).subquery()
 
     main = (
-        select(ItemsLog, Items)
+        select(
+            Items.name,
+            ItemsLog.size,
+            Craftable.craftable,
+            ItemsLog.ts
+        )
         .join(
             sub,
             (ItemsLog.id == sub.c.item_id) &
             (ItemsLog.ts == sub.c.latest_ts)
         )
         .join(Items, ItemsLog.id == Items.id, isouter=True)
+        .join(Craftable, Craftable.itemid == Items.id, isouter=True)
         .where(ItemsLog.ts > cutoff)
         .where(Items.name.not_like("%Coin%"))
     )
 
-    itemsq = session.exec(main)
+    itemsq = session.exec(main).all()
     
-    returnitems = []
-    for log, items in itemsq:
-        combined = {
-            'name': items.name,
-            'size': log.size,
-            'ts': log.ts
-        }
+    dictitems = [dict(item._mapping) for item in itemsq]
 
-        validateditem = ItemsInv.model_validate(combined)
+    returnitems = []
+    for item in dictitems:
+        if item["craftable"] is None:
+            item["craftable"] = False
+        validateditem = ItemsInv.model_validate(item)
         returnitems.append(validateditem)
     
     return returnitems
