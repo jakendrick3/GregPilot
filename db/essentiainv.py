@@ -6,6 +6,7 @@ from .essentia import Essentia
 class EssentiaInv(SQLModel):
     name: str
     amount: int
+    id: str
     ts: datetime
 
 
@@ -21,7 +22,12 @@ async def read_essentia_inv(*, session: Session):
     ).subquery()
 
     main = (
-        select(EssentiaLog, Essentia)
+        select(
+            Essentia.name,
+            EssentiaLog.amount,
+            Essentia.id,
+            EssentiaLog.ts
+        )
         .join(
             sub,
             (EssentiaLog.id == sub.c.essentia_id) &
@@ -31,17 +37,13 @@ async def read_essentia_inv(*, session: Session):
         .where(EssentiaLog.ts > cutoff)
     )
 
-    essentiaq = session.exec(main)
+    fluidsq = session.exec(main).all()
     
-    returnessentia = []
-    for log, essentia in essentiaq:
-        combined = {
-            'name': essentia.name,
-            'amount': log.amount,
-            'ts': log.ts
-        }
+    dictitems = [dict(item._mapping) for item in fluidsq]
 
-        validateditem = EssentiaInv.model_validate(combined)
-        returnessentia.append(validateditem)
+    returnfluids = []
+    for item in dictitems:
+        validateditem = EssentiaInv.model_validate(item)
+        returnfluids.append(validateditem)
     
-    return returnessentia
+    return returnfluids

@@ -8,6 +8,7 @@ class ItemsInv(SQLModel):
     name: str
     size: int
     craftable: bool
+    id: str
     ts: datetime
 
 
@@ -27,6 +28,7 @@ async def read_items_inv(*, session: Session):
             Items.name,
             ItemsLog.size,
             Craftable.craftable,
+            Items.id,
             ItemsLog.ts
         )
         .join(

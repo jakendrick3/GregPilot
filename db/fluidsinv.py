@@ -8,6 +8,7 @@ class FluidsInv(SQLModel):
     name: str
     amount: int
     craftable: bool
+    id: str
     ts: datetime
 
 
@@ -27,6 +28,7 @@ async def read_fluids_inv(*, session: Session):
             Fluids.name,
             FluidsLog.amount,
             Craftable.craftable,
+            Fluids.id,
             FluidsLog.ts
         )
         .join(
