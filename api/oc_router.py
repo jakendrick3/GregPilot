@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session, select
-from ..db import db, items, itemslog, fluids, fluidslog, powerlog, essentia, essentialog, cpus, craftables
+from ..db import db, items, itemslog, fluids, fluidslog, powerlog, essentia, essentialog, cpus, craftables, craft
 from slpp import slpp as lua
 
 router = router = APIRouter(
@@ -27,7 +27,7 @@ async def post_oc_items(*, session: Session = Depends(db.get_session), request: 
     passids = []
     passlogs = []
     for entry in data:
-        itemid = entry["id"] + entry["damage"]
+        itemid = entry["id"] + ";" + entry["damage"]
         newid = {
             'id': itemid,
             'name': entry["name"]
@@ -143,7 +143,7 @@ async def post_oc_craftables(*, session: Session = Depends(db.get_session), requ
 
     for entry in data:
         if entry["type"] == "item":
-            itemid = str(entry["id"]) + str(entry["damage"])
+            itemid = str(entry["id"]) + ";" + str(entry["damage"])
             newitem = {
                 'id': itemid,
                 'name': entry["name"]
@@ -177,4 +177,19 @@ async def post_oc_craftables(*, session: Session = Depends(db.get_session), requ
     await items.create_items(session=session, items=passitems)
     await fluids.create_fluids(session=session, fluids=passfluids)
     await craftables.create_craftables(session=session, crafts=passcrafts)
+    return
+
+@router.post("/api/oc/craft")
+async def post_oc_crafts(*, session: Session = Depends(db.get_session), request: Request):
+    body_bytes = await request.body()
+    body_str = body_bytes.decode("utf-8")
+    data = unserialize(body_str)
+
+    patchcrafts = []
+    for record in data:
+        refitem = session.exec(select(craft.CraftRequest).where(craft.CraftRequest.requestid == record["requestid"])).first()
+        refitem.status = record["status"]
+        patchcrafts.append(refitem)
+
+    await craft.update_craftrequests(session=session, crafts=patchcrafts)
     return
