@@ -15,30 +15,30 @@ class ItemsInv(SQLModel):
 async def read_items_inv(*, session: Session):
     cutoff = datetime.now(tz=timezone.utc) - timedelta(minutes=20)
 
-    sub = (
+    ranked = (
         select(
-            ItemsLog.id.label("item_id"),
-            func.max(ItemsLog.ts).label("latest_ts")
+            ItemsLog,
+            func.row_number()
+            .over(
+                partition_by=ItemsLog.id,
+                order_by=ItemsLog.ts.desc()
+            )
+            .label("rnk")
         )
-        .group_by(ItemsLog.id)
     ).subquery()
 
     main = (
         select(
             Items.name,
-            ItemsLog.size,
+            ranked.c.size,
             Craftable.craftable,
             Items.id,
-            ItemsLog.ts
+            ranked.c.ts
         )
-        .join(
-            sub,
-            (ItemsLog.id == sub.c.item_id) &
-            (ItemsLog.ts == sub.c.latest_ts)
-        )
-        .join(Items, ItemsLog.id == Items.id, isouter=True)
+        .join(ranked, ranked.c.id == Items.id)
         .join(Craftable, Craftable.itemid == Items.id, isouter=True)
-        .where(ItemsLog.ts > cutoff)
+        .where(ranked.c.rnk == 1)
+        .where(ranked.c.ts > cutoff)
         .where(Items.name.not_like("%Coin%"))
     )
 

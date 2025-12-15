@@ -13,33 +13,35 @@ class EssentiaInv(SQLModel):
 async def read_essentia_inv(*, session: Session):
     cutoff = datetime.now(tz=timezone.utc) - timedelta(minutes=20)
 
-    sub = (
+    ranked_essentia = (
         select(
             EssentiaLog.id.label("essentia_id"),
-            func.max(EssentiaLog.ts).label("latest_ts")
+            EssentiaLog.amount,
+            EssentiaLog.ts,
+            func.row_number()
+            .over(
+                partition_by=EssentiaLog.id,
+                order_by=EssentiaLog.ts.desc()
+            )
+            .label("rnk")
         )
-        .group_by(EssentiaLog.id)
     ).subquery()
 
     main = (
         select(
             Essentia.name,
-            EssentiaLog.amount,
+            ranked_essentia.c.amount,
             Essentia.id,
-            EssentiaLog.ts
+            ranked_essentia.c.ts
         )
-        .join(
-            sub,
-            (EssentiaLog.id == sub.c.essentia_id) &
-            (EssentiaLog.ts == sub.c.latest_ts)
-        )
-        .join(Essentia, EssentiaLog.id == Essentia.id, isouter=True)
-        .where(EssentiaLog.ts > cutoff)
+        .join(ranked_essentia, ranked_essentia.c.essentia_id == Essentia.id)
+        .where(ranked_essentia.c.rnk == 1)
+        .where(ranked_essentia.c.ts > cutoff)
     )
 
-    fluidsq = session.exec(main).all()
+    essentiaq = session.exec(main).all()
     
-    dictitems = [dict(item._mapping) for item in fluidsq]
+    dictitems = [dict(item._mapping) for item in essentiaq]
 
     returnfluids = []
     for item in dictitems:

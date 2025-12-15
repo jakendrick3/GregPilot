@@ -15,34 +15,36 @@ class FluidsInv(SQLModel):
 async def read_fluids_inv(*, session: Session):
     cutoff = datetime.now(tz=timezone.utc) - timedelta(minutes=20)
 
-    sub = (
+    ranked_fluids = (
         select(
             FluidsLog.id.label("fluid_id"),
-            func.max(FluidsLog.ts).label("latest_ts")
+            FluidsLog.amount,
+            FluidsLog.ts,
+            func.row_number()
+            .over(
+                partition_by=FluidsLog.id,
+                order_by=FluidsLog.ts.desc()
+            )
+            .label("rnk")
         )
-        .group_by(FluidsLog.id)
     ).subquery()
 
     main = (
         select(
             Fluids.name,
-            FluidsLog.amount,
-            Craftable.craftable,
+            ranked_fluids.c.amount,
+            Craftable.c.craftable,
             Fluids.id,
-            FluidsLog.ts
+            ranked_fluids.c.ts
         )
-        .join(
-            sub,
-            (FluidsLog.id == sub.c.fluid_id) &
-            (FluidsLog.ts == sub.c.latest_ts)
-        )
-        .join(Fluids, FluidsLog.id == Fluids.id, isouter=True)
-        .join(Craftable, Craftable.fluidid == Fluids.id, isouter=True)
-        .where(FluidsLog.ts > cutoff)
+        .join(ranked_fluids, ranked_fluids.c.fluid_id == Fluids.id)
+        .join(Craftable, Craftable.c.fluidid == Fluids.id, isouter=True)
+        .where(ranked_fluids.c.rnk == 1)
+        .where(ranked_fluids.c.ts > cutoff)
     )
 
     fluidsq = session.exec(main).all()
-    
+
     dictitems = [dict(item._mapping) for item in fluidsq]
 
     returnfluids = []
