@@ -33,12 +33,12 @@ async def read_fluids_inv(*, session: Session):
         select(
             Fluids.name,
             ranked_fluids.c.amount,
-            Craftable.c.craftable,
+            Craftable.craftable,
             Fluids.id,
             ranked_fluids.c.ts
         )
         .join(ranked_fluids, ranked_fluids.c.fluid_id == Fluids.id)
-        .join(Craftable, Craftable.c.fluidid == Fluids.id, isouter=True)
+        .join(Craftable, Craftable.fluidid == Fluids.id, isouter=True)
         .where(ranked_fluids.c.rnk == 1)
         .where(ranked_fluids.c.ts > cutoff)
     )
