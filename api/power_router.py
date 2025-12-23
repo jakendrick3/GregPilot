@@ -9,7 +9,7 @@ router = APIRouter(
 
 @router.get("/api/power/log", response_model=list[powerlog.PowerLog])
 async def get_power_log(*, session: Session = Depends(db.get_session), paginate: paginate.Paginate = Depends(), filter: powerlog.PowerFilter = Depends()):
-    returnlogs = await powerlog.read_power_log(session=session, offset=offset, limit=limit)
+    returnlogs = await powerlog.read_power_log(session=session, paginate=paginate, filter=filter)
     return returnlogs
 
 @router.post("/api/power/log", response_model=powerlog.PowerLog)
