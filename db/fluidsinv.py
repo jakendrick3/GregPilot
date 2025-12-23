@@ -3,6 +3,9 @@ from datetime import datetime, timedelta, timezone
 from .fluidslog import FluidsLog
 from .fluids import Fluids
 from .craftables import Craftable
+from pydantic import BaseModel
+from .paginate import Paginate
+from typing import Optional
 
 class FluidsInv(SQLModel):
     name: str
@@ -11,8 +14,12 @@ class FluidsInv(SQLModel):
     id: str
     ts: datetime
 
+class FluidsInvFilter(BaseModel):
+    name: Optional[str] = None
+    craftable: Optional[bool] = None
 
-async def read_fluids_inv(*, session: Session):
+
+async def read_fluids_inv(*, session: Session, filter: FluidsInvFilter):
     cutoff = datetime.now(tz=timezone.utc) - timedelta(minutes=20)
 
     ranked_fluids = (
@@ -42,6 +49,12 @@ async def read_fluids_inv(*, session: Session):
         .where(ranked_fluids.c.rnk == 1)
         .where(ranked_fluids.c.ts > cutoff)
     )
+
+    if filter.name is not None:
+        main = main.where(Fluids.name.contains(filter.name))
+    
+    if filter.craftable is not None:
+        main = main.where(Craftable.craftable == filter.craftable)
 
     fluidsq = session.exec(main).all()
 

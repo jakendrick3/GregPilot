@@ -1,6 +1,8 @@
 from sqlmodel import SQLModel, Field, Column, TIMESTAMP, text, Session, select
 from datetime import datetime
-from . import items
+from pydantic import BaseModel
+from .paginate import Paginate
+from typing import Optional
 
 class ItemsLogEntry(SQLModel):
     id: str = Field(foreign_key="items.id", nullable=False)
@@ -14,9 +16,25 @@ class ItemsLog(ItemsLogEntry, table=True):
         server_default=text("now()"),
     ))
 
+class ItemsLogFilter(BaseModel):
+    id: Optional[str] = None
+    newerthan: Optional[datetime] = None
+    olderthan: Optional[datetime] = None
 
-async def read_items_log(*, session: Session, offset: int = 0, limit: int = 10000):
-    items = session.exec(select(ItemsLog).offset(offset).limit(limit)).all()
+
+async def read_items_log(*, session: Session, paginate: Paginate, filter: ItemsLogFilter):
+    query = select(ItemsLog).offset(paginate.offset).limit(paginate.limit)
+
+    if filter.id is not None:
+        query = query.where(ItemsLog.id == filter.id)
+
+    if filter.newerthan is not None:
+        query = query.where(ItemsLog.ts > filter.newerthan)
+
+    if filter.olderthan is not None:
+        query = query.where(ItemsLog.ts < filter.olderthan)
+
+    items = session.exec(query).all()
     return items
 
 async def create_items_log(*, session: Session, items: list[ItemsLogEntry]):

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select
-from ..db import db, craft, craftables
+from ..db import db, craft, craftables, paginate
 
 router = APIRouter(
     tags=["requests"],
@@ -8,8 +8,8 @@ router = APIRouter(
 )
 
 @router.get("/api/requests/craft", response_model=list[craft.CraftRequest])
-async def get_craft_requests(*, session: Session = Depends(db.get_session), offset: int = 0, limit: int = Query(default=10000, le=10000)):
-    returncrafts = await craft.read_craftrequests(session=session, offset=offset, limit=limit)
+async def get_craft_requests(*, session: Session = Depends(db.get_session), paginate: paginate.Paginate = Depends(), filter: craft.CraftRequestFilter = Depends()):
+    returncrafts = await craft.read_craftrequests(session=session, paginate=paginate, filter=filter)
     return returncrafts
 
 @router.post("/api/requests/craft", response_model=list[craft.CraftRequestPublic])

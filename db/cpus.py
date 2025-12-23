@@ -1,4 +1,7 @@
 from sqlmodel import SQLModel, Field, Column, TIMESTAMP, text, Session, select, func, delete
+from pydantic import BaseModel
+from typing import Optional
+from .paginate import Paginate
 
 class CPUPublic(SQLModel):
     id: int | None = None
@@ -12,9 +15,20 @@ class CPUPublic(SQLModel):
 class CPU(CPUPublic, table=True):
     key: int | None = Field(default=None, primary_key=True)
 
-async def read_cpus(*, session: Session, offset: int = 0, limit: int = 10000):
-    returncpus = session.exec(select(CPU).offset(offset).limit(limit)).all()
+class CPUFilter(BaseModel):
+    name: Optional[str] = None
+    busy: Optional[bool] = None
+
+async def read_cpus(*, session: Session, paginate: Paginate, filter: CPUFilter):
+    query = select(CPU).offset(paginate.offset).limit(paginate.limit)
     
+    if filter.name is not None:
+        query = query.where(CPU.name.contains(filter.name))
+    
+    if filter.busy is not None:
+        query = query.where(CPU.busy == filter.busy)
+    
+    returncpus = session.exec(query).all()
     return returncpus
 
 async def create_cpus(*, session: Session, cpus: list[CPUPublic]):

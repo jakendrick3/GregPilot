@@ -1,11 +1,22 @@
 from sqlmodel import Field, SQLModel, Column, TIMESTAMP, text, Session, select
+from pydantic import BaseModel
+from typing import Optional
+from .paginate import Paginate
 
 class Essentia(SQLModel, table=True):
     id: str = Field(primary_key=True)
     name: str
 
-async def read_essentia(*, session: Session, offset: int = 0, limit: int = 10000):
-    returness = session.exec(select(Essentia).offset(offset).limit(limit)).all()
+class EssentiaFilter(BaseModel):
+    name: Optional[str] = None
+
+async def read_essentia(*, session: Session, paginate: Paginate, filter: EssentiaFilter):
+    query = select(Essentia).offset(paginate.offset).limit(paginate.limit)
+
+    if filter.name is not None:
+        query = query.where(Essentia.name.contains(filter.name))
+    
+    returness = session.exec(query).all()
     return returness
 
 async def create_essentia(*, session: Session, essentia: list[Essentia]):

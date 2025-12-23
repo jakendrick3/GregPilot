@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select
-from ..db import db, craftables
+from ..db import db, craftables, paginate
 
 router = APIRouter(
     tags=["craftables"],
@@ -8,8 +8,8 @@ router = APIRouter(
 )
 
 @router.get("/api/craftables", response_model=list[craftables.Craftable])
-async def get_craftables(*, session: Session = Depends(db.get_session), offset: int = 0, limit: int = Query(default=10000, le=10000)):
-    returncrafts = await craftables.read_craftables(session=session, offset=offset, limit=limit)
+async def get_craftables(*, session: Session = Depends(db.get_session), paginate: paginate.Paginate = Depends(), filter: craftables.CraftableFilter = Depends()):
+    returncrafts = await craftables.read_craftables(session=session, paginate=paginate, filter=filter)
     return returncrafts
 
 @router.post("/api/craftables", response_model=list[craftables.Craftable])

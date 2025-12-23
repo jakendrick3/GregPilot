@@ -1,11 +1,22 @@
 from sqlmodel import Field, SQLModel, Column, TIMESTAMP, text, Session, select
+from pydantic import BaseModel
+from typing import Optional
+from .paginate import Paginate
 
 class Fluids(SQLModel, table=True):
     id: str = Field(primary_key=True)
     name: str
 
-async def read_fluids(*, session: Session, offset: int = 0, limit: int = 10000):
-    returnfluids = session.exec(select(Fluids).offset(offset).limit(limit)).all()
+class FluidsFilter(BaseModel):
+    name: Optional[str] = None
+
+async def read_fluids(*, session: Session, paginate: Paginate, filter: FluidsFilter):
+    query = select(Fluids).offset(paginate.offset).limit(paginate.limit)
+
+    if filter.name is not None:
+        query = query.where(Fluids.name.contains(filter.name))
+
+    returnfluids = session.exec(query).all()
     return returnfluids
 
 async def create_fluids(*, session: Session, fluids: list[Fluids]):

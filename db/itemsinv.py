@@ -3,6 +3,13 @@ from datetime import datetime, timedelta, timezone
 from .itemslog import ItemsLog
 from .items import Items
 from .craftables import Craftable
+from pydantic import BaseModel
+from .paginate import Paginate
+from typing import Optional
+
+class ItemsInvFilter(BaseModel):
+    name: Optional[str] = None
+    craftable: Optional[bool] = None
 
 class ItemsInv(SQLModel):
     name: str
@@ -12,7 +19,7 @@ class ItemsInv(SQLModel):
     ts: datetime
 
 
-async def read_items_inv(*, session: Session):
+async def read_items_inv(*, session: Session, filter: ItemsInvFilter):
     cutoff = datetime.now(tz=timezone.utc) - timedelta(minutes=20)
 
     ranked = (
@@ -41,6 +48,12 @@ async def read_items_inv(*, session: Session):
         .where(ranked.c.ts > cutoff)
         .where(Items.name.not_like("%Coin%"))
     )
+
+    if filter.name is not None:
+        main = main.where(Items.name.contains(filter.name))
+    
+    if filter.craftable is not None:
+        main = main.where(Craftable.craftable == filter.craftable)
 
     itemsq = session.exec(main).all()
     

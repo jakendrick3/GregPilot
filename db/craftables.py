@@ -1,5 +1,8 @@
 from sqlmodel import SQLModel, Field, Column, TIMESTAMP, text, Session, select, func, delete, or_
 from datetime import datetime, timezone, timedelta
+from pydantic import BaseModel
+from typing import Optional
+from .paginate import Paginate
 
 class CraftablePublic(SQLModel):
     craftable: bool = True
@@ -16,9 +19,24 @@ class Craftable(CraftablePublic, table=True):
         server_default=text("now()"),
     ))
 
-async def read_craftables(*, session: Session, offset: int = 0, limit: int = 10000):
-    returncrafts = session.exec(select(Craftable).offset(offset).limit(limit)).all()
+class CraftableFilter(BaseModel):
+    type: Optional[str] = None
+    itemid: Optional[str] = None
+    fluidid: Optional[str] = None
+
+async def read_craftables(*, session: Session, paginate: Paginate, filter: CraftableFilter):
+    query = select(Craftable).offset(paginate.offset).limit(paginate.limit)
+
+    if filter.type is not None:
+        query = query.where(Craftable.type == filter.type)
     
+    if filter.itemid is not None:
+        query = query.where(Craftable.itemid == filter.itemid)
+    
+    if filter.fluidid is not None:
+        query = query.where(Craftable.fluidid == filter.fluidid)
+
+    returncrafts = session.exec(query).all()    
     return returncrafts
 
 async def create_craftables(*, session: Session, crafts: list[CraftablePublic]):

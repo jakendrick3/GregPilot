@@ -1,4 +1,10 @@
 from sqlmodel import Field, SQLModel, Column, TIMESTAMP, text, Session, select
+from pydantic import BaseModel
+from typing import Optional
+from .paginate import Paginate
+
+class ItemsFilter(BaseModel):
+    name: Optional[str] = None
 
 class Items(SQLModel, table=True):
     id: str = Field(primary_key=True)
@@ -7,8 +13,13 @@ class Items(SQLModel, table=True):
     name: str
 
 
-async def read_items(*, session: Session, offset: int = 0, limit: int = 10000):
-    items = session.exec(select(Items).offset(offset).limit(limit)).all()
+async def read_items(*, session: Session, paginate: Paginate, filter: ItemsFilter):
+    query = select(Items).offset(paginate.offset).limit(paginate.limit)
+
+    if filter.name is not None:
+        query = query.where(Items.name.contains(filter.name))
+
+    items = session.exec(query).all()
     return items
 
 async def create_items(*, session: Session, items: list[Items]):

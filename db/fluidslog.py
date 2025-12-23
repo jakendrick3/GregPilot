@@ -1,5 +1,8 @@
 from sqlmodel import SQLModel, Field, Column, TIMESTAMP, text, Session, select
 from datetime import datetime
+from pydantic import BaseModel
+from .paginate import Paginate
+from typing import Optional
 
 class FluidsLogEntry(SQLModel):
     id: str = Field(foreign_key="fluids.id", nullable=False)
@@ -13,8 +16,24 @@ class FluidsLog(FluidsLogEntry, table=True):
         server_default=text("now()"),
     ))
 
-async def read_fluids_log(*, session: Session, offset: int = 0, limit: int = 10000):
-    items = session.exec(select(FluidsLog).offset(offset).limit(limit)).all()
+class FluidsLogFilter(BaseModel):
+    id: Optional[str] = None
+    newerthan: Optional[datetime] = None
+    olderthan: Optional[datetime] = None
+
+async def read_fluids_log(*, session: Session, paginate: Paginate, filter: FluidsLogFilter):
+    query = select(FluidsLog).offset(paginate.offset).limit(paginate.limit)
+
+    if filter.id is not None:
+        query = query.where(FluidsLog.id == filter.id)
+
+    if filter.newerthan is not None:
+        query = query.where(FluidsLog.ts > filter.newerthan)
+
+    if filter.olderthan is not None:
+        query = query.where(FluidsLog.ts < filter.olderthan)
+
+    items = session.exec(query).all()
     return items
 
 async def create_fluids_log(*, session: Session, fluids: list[FluidsLogEntry]):

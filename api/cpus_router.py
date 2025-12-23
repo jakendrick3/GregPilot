@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select
-from ..db import db, cpus
+from ..db import db, cpus, paginate
 
 router = APIRouter(
     tags=["cpus"],
@@ -8,8 +8,8 @@ router = APIRouter(
 )
 
 @router.get("/api/cpus", response_model=list[cpus.CPU])
-async def get_cpus(*, session: Session = Depends(db.get_session), offset: int = 0, limit: int = Query(default=10000, le=10000)):
-    returncpus = await cpus.read_cpus(session=session, offset=offset, limit=limit)
+async def get_cpus(*, session: Session = Depends(db.get_session), paginate: paginate.Paginate = Depends(), filter: cpus.CPUFilter = Depends()):
+    returncpus = await cpus.read_cpus(session=session, paginate=paginate, filter=filter)
     return returncpus
 
 @router.post("/api/cpus", response_model=list[cpus.CPU])

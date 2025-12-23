@@ -1,6 +1,8 @@
 from sqlmodel import SQLModel, Field, Column, TIMESTAMP, text, Session, select
 from datetime import datetime
-from . import items
+from pydantic import BaseModel
+from .paginate import Paginate
+from typing import Optional
 
 class PowerLogEntry(SQLModel):
     outputavg: int
@@ -16,9 +18,21 @@ class PowerLog(PowerLogEntry, table=True):
         server_default=text("now()"),
     ))
 
+class PowerFilter(BaseModel):
+    newerthan: Optional[datetime] = None
+    olderthan: Optional[datetime] = None
 
-async def read_power_log(*, session: Session, offset: int = 0, limit: int = 10000):
-    powerlogs = session.exec(select(PowerLog).offset(offset).limit(limit)).all()
+
+async def read_power_log(*, session: Session, paginate: Paginate, filter: PowerFilter):
+    query = select(PowerLog).offset(paginate.offset).limit(paginate.limit)
+
+    if filter.newerthan is not None:
+        query = query.where(PowerLog.ts > filter.newerthan)
+
+    if filter.olderthan is not None:
+        query = query.where(PowerLog.ts < filter.olderthan)
+
+    powerlogs = session.exec(query).all()
     return powerlogs
 
 async def create_power_log(*, session: Session, entry: PowerLogEntry):

@@ -1,5 +1,8 @@
 from sqlmodel import Field, SQLModel, Column, TIMESTAMP, text, Session, select
 from datetime import datetime
+from pydantic import BaseModel
+from typing import Optional
+from .paginate import Paginate
 
 class CraftRequestPublic(SQLModel):
     type: str
@@ -15,11 +18,32 @@ class CraftRequest(CraftRequestPublic, table=True):
         server_default=text("now()"),
     ))
 
-async def read_craftrequests(*, session: Session, offset: int = 0, limit: int = 10000, all: bool = False):
-    if all == True:
-        returncrafts = session.exec(select(CraftRequest).offset(offset).limit(limit)).all()
-    else:
-        returncrafts = session.exec(select(CraftRequest).where(CraftRequest.status == "pending").offset(offset).limit(limit)).all()
+class CraftRequestFilter(BaseModel):
+    type: Optional[str] = None
+    id: Optional[str] = None
+    status: Optional[str] = None
+    newerthan: Optional[datetime] = None
+    olderthan: Optional[datetime] = None
+
+async def read_craftrequests(*, session: Session, paginate: Paginate, filter: CraftRequestFilter):
+    query = select(CraftRequest).offset(paginate.offset).limit(paginate.limit)
+
+    if filter.type is not None:
+        query = query.where(CraftRequest.type == filter.type)
+    
+    if filter.id is not None:
+        query = query.where(CraftRequest.id == filter.id)
+
+    if filter.status is not None:
+        query = query.where(CraftRequest.status == filter.status)
+
+    if filter.newerthan is not None:
+        query = query.where(CraftRequest.ts > filter.newerthan)
+
+    if filter.olderthan is not None:
+        query = query.where(CraftRequest.ts < filter.olderthan)
+
+    returncrafts = session.exec(query).all()
     return returncrafts
 
 async def create_craftrequests(*, session: Session, crafts: list[CraftRequestPublic]):
